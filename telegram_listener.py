@@ -18,10 +18,14 @@ def get_updates(token, offset=None):
 
 def send_message(token, chat_id, text):
     url = f"https://api.telegram.org/bot{token}/sendMessage"
-    requests.post(url, json={
-        "chat_id": chat_id,
-        "text": text
-    })
+    try:
+        r = requests.post(url, json={
+            "chat_id": chat_id,
+            "text": text
+        }, timeout=15)
+        r.raise_for_status()
+    except Exception as e:
+        print(f"⚠️ Listener send_message failed: {e}")
 
 
 def load_state_by_id(listing_id):
@@ -80,24 +84,29 @@ def handle_status(token, chat_id, text):
 
 def run_listener(token, chat_id, last_update_id=None):
     url = f"https://api.telegram.org/bot{token}/getUpdates"
-
     params = {}
-    if last_update_id:
+
+    if last_update_id is not None:
         params["offset"] = last_update_id
 
-    r = requests.get(url, params=params)
-    data = r.json()
+    try:
+        r = requests.get(url, params=params, timeout=15)
+        r.raise_for_status()
+        data = r.json()
 
-    if not data.get("ok"):
-        return last_update_id
+        if not data.get("ok"):
+            return last_update_id
 
-    for update in data.get("result", []):
-        last_update_id = update["update_id"] + 1
+        for update in data.get("result", []):
+            last_update_id = update["update_id"] + 1
 
-        message = update.get("message", {})
-        text = message.get("text")
+            message = update.get("message", {})
+            text = message.get("text")
 
-        if text and text.startswith("/status"):
-            handle_status(token, chat_id, text)
+            if text and text.startswith("/status"):
+                handle_status(token, chat_id, text)
+
+    except Exception as e:
+        print(f"📡 Telegram listener network issue: {e}")
 
     return last_update_id

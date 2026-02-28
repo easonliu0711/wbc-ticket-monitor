@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+  wbc-bot:
+    image: wbc-sniper:v1
+    container_name: wbc-bot
+    restart: always
+    environment:
+      - TZ=Asia/Tokyo
+      - PYTHONUNBUFFERED=1
+    env_file: .env
+    volumes:
+      - .:/app  # 直接掛載當前目錄，這樣所有的 state_*.json 都能同步到 D 槽

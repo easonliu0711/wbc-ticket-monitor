@@ -21,7 +21,7 @@ load_dotenv()
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("CHAT_ID")
-CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL", 300))
+CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL"))
 
 if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
     raise RuntimeError("❌ Missing TELEGRAM_TOKEN or CHAT_ID in .env")
@@ -124,20 +124,25 @@ def main():
     print("🚀 雷達啟動（隱蔽模式）")
 
     while True:
-        unknowns = run_once(config)
+        try:
+            # 1. 執行檢查
+            unknowns = run_once(config)
 
-        last_update_id = run_listener(
-            TELEGRAM_TOKEN,
-            TELEGRAM_CHAT_ID,
-            last_update_id
-        )
+            # 2. 執行監聽器 (加上 try...except)
+            try:
+                last_update_id = run_listener(
+                    TELEGRAM_TOKEN,
+                    TELEGRAM_CHAT_ID,
+                    last_update_id
+                )
+            except Exception as e:
+                print(f"📡 Listener 暫時連線失敗: {e}")
 
-        # 隨機間隔（anti-detection）
-        interval = random.randint(
-            int(base_interval * 0.8),
-            int(base_interval * 1.2)
-        )
+        except Exception as e:
+            print(f"🚨 主迴圈發生非預期錯誤: {e}")
 
+        # 隨機間隔
+        interval = random.randint(int(base_interval * 0.8), int(base_interval * 1.2))
         print(f"💤 下次檢查: {interval} 秒後")
         time.sleep(interval)
 
